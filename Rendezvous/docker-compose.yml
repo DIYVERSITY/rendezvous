@@ -1,0 +1,103 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: rendezvous_db
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=rendezvous
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+    networks:
+      - rendezvous_net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: rendezvous_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - rendezvous_net
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rendezvous_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/rendezvous
+      - REDIS_URL=redis://redis:6379
+      - AGENT_FIRECRAWL_URL=http://firecrawl_agent:8081
+      - AGENT_INTERFACE_URL=http://interface_agent:8082
+      - AGENT_ODR_URL=http://odr_agent:8083
+    depends_on:
+      - db
+      - redis
+      - firecrawl_agent
+      - interface_agent
+      - odr_agent
+  firecrawl_agent:
+    build:
+      context: ./agents/coral_agents/Coral-FirecrawlMCP-Agent
+      dockerfile: Dockerfile
+    container_name: firecrawl_agent
+    ports:
+      - "8081:8081"
+    networks:
+      - rendezvous_net
+    restart: unless-stopped
+
+  interface_agent:
+    build:
+      context: ./agents/coral_agents/Coral-Interface-Agent
+      dockerfile: Dockerfile
+    container_name: interface_agent
+    ports:
+      - "8082:8082"
+    networks:
+      - rendezvous_net
+    restart: unless-stopped
+
+  odr_agent:
+    build:
+      context: ./agents/coral_agents/Coral-OpenDeepResearch-Agent
+      dockerfile: Dockerfile
+    container_name: odr_agent
+    ports:
+      - "8083:8083"
+    networks:
+      - rendezvous_net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rendezvous_frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    networks:
+      - rendezvous_net
+    restart: unless-stopped
+
+networks:
+  rendezvous_net:
+    driver: bridge
+
+volumes:
+  postgres_data:

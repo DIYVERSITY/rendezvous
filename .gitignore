@@ -1,0 +1,21 @@
+# Dependencies and production builds
+node_modules/
+*/node_modules/
+
+.next/
+*/.next/
+
+.env
+
+__pycache__/
+*.py[cod]
+
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+*.log
+pip-log.txt
+pip-delete-this-directory.txt
